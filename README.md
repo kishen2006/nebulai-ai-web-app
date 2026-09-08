@@ -139,6 +139,10 @@ Click the **✨ AI Assistant** button in the top right to open the conversationa
 .\mvnw.cmd test
 ```
 
+     https://drive.google.com/file/d/16_fu8NcOU5MMeLhzyEAPJBudcochl9Ap/view?usp=sharing
+
+
+
 Verifies:
 - `SearchFilterTest`: Translates complex filters (sender, date ranges, unread status) into Gmail query syntax.
 - `AiToolRegistryTest`: Validates the Gemini Function Calling schema declarations.
