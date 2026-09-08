@@ -1,0 +1,27 @@
+# Environment & Secrets
+.env
+*.env.local
+tokens/
+
+# Maven build output
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Bundled maven tools
+tools/
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+*.settings/
+
+# OS generated
+.DS_Store
+Thumbs.db

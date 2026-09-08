@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula Mail — AI-Powered Email</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/mail.css">
+    <link rel="stylesheet" href="/css/ai-assistant.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="header-left">
+            <div class="app-logo">
+                <span class="logo-icon">✨</span>
+                <span class="logo-text">Nebula<strong>Mail</strong></span>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search mail by keyword, sender, or date..." autocomplete="off">
+                <button id="filterToggleBtn" class="btn-icon" title="Toggle advanced search filters">⚙️</button>
+                <button id="searchBtn" class="btn-search">Search</button>
+            </div>
+
+            <!-- Advanced Filter Bar (collapsible) -->
+            <div id="filterDropdown" class="filter-dropdown hidden">
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <label for="filterSender">From / Sender</label>
+                        <input type="text" id="filterSender" placeholder="e.g. alice@example.com">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterDateFrom">After Date</label>
+                        <input type="date" id="filterDateFrom">
+                    </div>
+                    <div class="filter-field">
+                        <label for="filterDateTo">Before Date</label>
+                        <input type="date" id="filterDateTo">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="filterUnreadOnly"> Show unread only
+                    </label>
+                    <div class="filter-btn-group">
+                        <button id="filterClearBtn" class="btn btn-secondary btn-sm">Clear</button>
+                        <button id="filterApplyBtn" class="btn btn-primary btn-sm">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <div id="syncStatus" class="sync-status" title="Real-time mail synchronization status">
+                <span class="sync-dot live"></span>
+                <span class="sync-text">Live Sync</span>
+                <button id="manualSyncBtn" class="btn-icon" title="Refresh mailbox now">🔄</button>
+            </div>
+
+            <div id="userProfile" class="user-profile hidden">
+                <div class="avatar" id="userAvatar">U</div>
+                <span class="user-email" id="userEmail">user@example.com</span>
+                <button id="logoutBtn" class="btn-logout" title="Logout">Log out</button>
+            </div>
+
+            <button id="aiToggleBtn" class="btn-ai-toggle" title="Toggle AI Assistant">
+                <span>✨ AI Assistant</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Login Prompt Overlay (shown when not authenticated with Google) -->
+    <div id="loginOverlay" class="auth-overlay hidden">
+        <div class="auth-modal">
+            <div class="auth-icon">✨</div>
+            <h2>Welcome to Nebula Mail</h2>
+            <p>Connect your real Gmail account via Google OAuth 2.0 to experience AI-powered email management.</p>
+            <div id="configWarning" class="config-warning hidden">
+                ⚠️ Google OAuth is not configured yet. Please ensure <code>GOOGLE_CLIENT_ID</code> and <code>GOOGLE_CLIENT_SECRET</code> are set in your <code>.env</code> file.
+            </div>
+            <a id="googleLoginBtn" href="/api/auth/google" class="btn-google-login">
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                Sign in with Google
+            </a>
+        </div>
+    </div>
+
+    <!-- Main 3-Pane Layout -->
+    <main class="app-main">
+        <!-- Pane 1: Sidebar -->
+        <aside class="mail-sidebar">
+            <button id="composeBtn" class="btn-compose">
+                <span class="compose-icon">✏️</span>
+                <span>Compose</span>
+            </button>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-folder="INBOX">
+                    <span class="nav-icon">📥</span>
+                    <span class="nav-label">Inbox</span>
+                    <span class="nav-badge" id="inboxUnreadBadge">0</span>
+                </button>
+                <button class="nav-item" data-folder="SENT">
+                    <span class="nav-icon">📤</span>
+                    <span class="nav-label">Sent</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-section">
+                <div class="section-title">Quick Filters</div>
+                <button id="quickUnreadBtn" class="nav-item nav-filter">
+                    <span class="nav-icon">🔵</span>
+                    <span class="nav-label">Unread Only</span>
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="ai-status-indicator">
+                    <span class="status-dot"></span>
+                    <span>AI Assistant Ready</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Pane 2: Email List -->
+        <section class="mail-list-pane">
+            <div class="list-header">
+                <div class="list-title-group">
+                    <h2 id="currentFolderTitle">Inbox</h2>
+                    <span id="activeFilterTag" class="filter-tag hidden">Filtered</span>
+                </div>
+                <div class="list-meta">
+                    <span id="mailCountText">Loading emails...</span>
+                </div>
+            </div>
+
+            <div id="emailListContainer" class="email-list">
+                <!-- Dynamically populated email cards -->
+                <div class="loading-spinner-wrapper">
+                    <div class="spinner"></div>
+                    <p>Fetching real emails from Gmail...</p>
+                </div>
+            </div>
+
+            <div class="list-footer">
+                <button id="prevPageBtn" class="btn btn-secondary btn-sm" disabled>Previous</button>
+                <button id="nextPageBtn" class="btn btn-secondary btn-sm" disabled>Next</button>
+            </div>
+        </section>
+
+        <!-- Pane 3: Email Detail / Reading Pane -->
+        <section class="mail-detail-pane" id="mailDetailPane">
+            <!-- Empty state when no email is selected -->
+            <div id="emptyDetailState" class="empty-state">
+                <div class="empty-icon">✉️</div>
+                <h3>No email selected</h3>
+                <p>Choose an email from the list to read it, or command the AI Assistant to find or summarize messages for you.</p>
+            </div>
+
+            <!-- Active Email Detail View -->
+            <div id="activeEmailView" class="email-detail hidden">
+                <div class="detail-header">
+                    <h1 id="detailSubject" class="detail-subject">Email Subject</h1>
+                    <div class="detail-actions">
+                        <button id="detailReplyBtn" class="btn btn-secondary btn-sm">↩ Reply</button>
+                        <button id="detailToggleReadBtn" class="btn btn-secondary btn-sm">Mark Unread</button>
+                        <button id="detailAiSummarizeBtn" class="btn btn-ai btn-sm">✨ Summarize with AI</button>
+                    </div>
+                </div>
+
+                <div class="sender-card">
+                    <div class="sender-avatar" id="detailAvatar">S</div>
+                    <div class="sender-info">
+                        <div class="sender-name-row">
+                            <span id="detailFrom" class="sender-from">Sender Name</span>
+                            <span id="detailDate" class="detail-date">Date & Time</span>
+                        </div>
+                        <div class="recipient-row">
+                            <span>To: <span id="detailTo">me</span></span>
+                            <span id="detailCcRow" class="hidden"> | Cc: <span id="detailCc"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="email-body-container">
+                    <iframe id="emailHtmlFrame" class="email-html-frame" sandbox="allow-same-origin" title="Email Body"></iframe>
+                    <div id="emailPlainText" class="email-plain-text hidden"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Assistant Sliding Drawer -->
+        <aside id="aiDrawer" class="ai-drawer">
+            <div class="ai-drawer-header">
+                <div class="ai-title-wrap">
+                    <span class="ai-sparkle">✨</span>
+                    <h3>Nebula AI Assistant</h3>
+                </div>
+                <button id="aiCloseBtn" class="btn-icon" title="Close AI Assistant">✕</button>
+            </div>
+
+            <!-- Current UI Context Pill -->
+            <div class="ai-context-banner">
+                <span class="context-label">Context:</span>
+                <span id="aiContextText" class="context-pill">Viewing: Inbox</span>
+            </div>
+
+            <!-- AI Chat Messages History -->
+            <div id="aiChatMessages" class="ai-chat-messages">
+                <div class="ai-message assistant">
+                    <div class="ai-avatar">✨</div>
+                    <div class="ai-bubble">
+                        Hello! I am your AI email assistant. I can search emails, draft replies, switch folders, and control your UI.
+                        <div class="ai-prompt-suggestions">
+                            <button class="prompt-chip" data-prompt="Show all unread emails">Show unread emails</button>
+                            <button class="prompt-chip" data-prompt="Switch to Sent folder">Go to Sent folder</button>
+                            <button class="prompt-chip" data-prompt="Compose an email to team@example.com about Project Update">Compose email to team</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Input Box -->
+            <form id="aiChatForm" class="ai-chat-input-box">
+                <input type="text" id="aiInput" placeholder="Command the AI (e.g. 'Reply saying I will attend tomorrow')..." autocomplete="off">
+                <button type="submit" id="aiSendBtn" class="btn-ai-send" title="Send command">➤</button>
+            </form>
+        </aside>
+    </main>
+
+    <!-- Compose / Reply Modal -->
+    <div id="composeModal" class="modal-backdrop hidden">
+        <div class="modal-dialog compose-modal">
+            <div class="modal-header">
+                <h3 id="composeModalTitle">New Message</h3>
+                <button id="composeCloseBtn" class="btn-icon">✕</button>
+            </div>
+            <form id="composeForm" class="compose-form">
+                <div class="compose-field">
+                    <label for="composeTo">To:</label>
+                    <input type="email" id="composeTo" required placeholder="recipient@example.com">
+                </div>
+                <div class="compose-field">
+                    <label for="composeCc">Cc:</label>
+                    <input type="text" id="composeCc" placeholder="optional cc...">
+                </div>
+                <div class="compose-field">
+                    <label for="composeSubject">Subject:</label>
+                    <input type="text" id="composeSubject" required placeholder="Subject">
+                </div>
+                <div class="compose-field compose-body-field">
+                    <textarea id="composeBody" required placeholder="Type your message here..."></textarea>
+                </div>
+                <div class="compose-actions">
+                    <div class="compose-left-actions">
+                        <button type="button" id="composeAiAssistBtn" class="btn btn-secondary btn-sm">✨ Polish with AI</button>
+                    </div>
+                    <div class="compose-right-actions">
+                        <button type="button" id="composeDiscardBtn" class="btn btn-secondary btn-sm">Discard</button>
+                        <button type="submit" id="composeSendBtn" class="btn btn-primary btn-sm">Send Email</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- JavaScript Scripts -->
+    <script src="/js/state.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/ui-dispatcher.js"></script>
+    <script src="/js/mail-view.js"></script>
+    <script src="/js/compose.js"></script>
+    <script src="/js/sync-stream.js"></script>
+    <script src="/js/ai-chat.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
